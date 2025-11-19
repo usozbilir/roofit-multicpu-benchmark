@@ -29,8 +29,7 @@ A more detailed explanation of the physics/computing context and of Amdahl’s l
   - writes all results to the `results/` directory.
 
 - `results/`  
-  Example output from a completed run, organised by event size and run label.  
-  Inside each event-size directory you will find:
+  Output directory created locally when you run the benchmark. It is organised by event size and run label. Each event-size directory typically contains:
   - `data_dir/csv/`  – timing results,
   - `data_dir/json/` – configuration and system info,
   - `data_dir/logs/` – full benchmark log,
@@ -85,3 +84,5 @@ The benchmark is intended to be used mainly for **educational and exploratory pu
 - to compare real measurements to an Amdahl-type model.
 
 The details of Amdahl’s law and its interpretation in this context will be documented in a dedicated slide deck or PDF that will be added to this repository in the future.
+
+In the future, benchmark results from multiple machines will be collected in a shared pool; the corresponding procedure and location will be documented here.
