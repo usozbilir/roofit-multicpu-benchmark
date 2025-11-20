@@ -269,7 +269,7 @@ ht_enabled = cpu_info["ht_enabled"]
 # OS name and version, username
 os_name, os_version = get_os_name_version()
 username = getpass.getuser()
-
+machine_name = platform.node()
 
 # In[ ]:
 
@@ -296,7 +296,8 @@ def add_common_footer(df):
     col3 = (
         f"ROOT version: {row0['ROOT_version']}\n"
         f"Python version: {row0['Python_version']}\n"
-        f"Username: {row0['Username']}"
+        f"Username: {row0['Username']}\n"
+        f"Machine: {row0['Machine']}"
     )
 
     fig = plt.gcf()
@@ -448,6 +449,7 @@ run_config = {
     "OS_Version": os_version,
     "Model": model_name,
     "Username": username,
+    "Machine": machine_name,
     "Available_cores_for_process": core_count,
     "Physical_cores": physical_cores,
     "Logical_cpus": logical_cpus,
@@ -579,11 +581,12 @@ for ncpu in cpu_counts:
         "OS_Version": os_version,
         "Username": username,
         "Available_cores": core_count,
-        "Total_physical_cores":physical_cores,
-        "Total_threads":total_core_count,
-        "event_size":name,
-        "seed":seed,
-        "bins":bins,
+        "Total_physical_cores": physical_cores,
+        "Total_threads": logical_cpus if logical_cpus is not None else total_core_count,
+        "Machine": machine_name,
+        "event_size": name,
+        "seed": seed,
+        "bins": bins,
         "Start_Date": _start_date, 
         "Start_Time": _start__time,         
         "Finish_Date": _finish_date, 
@@ -599,8 +602,8 @@ for ncpu in cpu_counts:
     file_exists = os.path.isfile(results_csv)
     df_row.to_csv(
         results_csv,
-        mode="a",              # ekleme
-        header=not file_exists, # ilk yazışta başlık, sonrakilerde başlıksız
+        mode="a",              
+        header=not file_exists, 
         index=False
     )
 
@@ -629,7 +632,7 @@ plt.legend()
 plt.grid(True, alpha=0.3)
 add_common_footer(df)
 plt.savefig(os.path.join(plot_dir, f"wall_time_vs_numcpu_{run_label}.png"), bbox_inches="tight")
-plt.show()
+plt.close()
 
 
 
@@ -643,7 +646,7 @@ plt.legend()
 plt.grid(True, alpha=0.3)
 add_common_footer(df)
 plt.savefig(os.path.join(plot_dir, f"sys_time_vs_numcpu_{run_label}.png"), bbox_inches="tight")
-plt.show()
+plt.close()
 
 
 plt.figure(figsize=(15, 7))
@@ -656,7 +659,7 @@ plt.legend()
 plt.grid(True, alpha=0.3)
 add_common_footer(df)
 plt.savefig(os.path.join(plot_dir, f"speedup_wall_vs_numcpu_{run_label}.png"), bbox_inches="tight")
-plt.show()
+plt.close()
 
 
 
@@ -694,7 +697,7 @@ plt.grid(True, alpha=0.3)
 plt.legend()
 add_common_footer(df)
 plt.savefig(os.path.join(plot_dir, f"amdahl_wall_time_{run_label}.png"), bbox_inches="tight")
-plt.show()
+plt.close()
 
 plt.figure(figsize=(15, 7))
 plt.plot(df["NumCPU"], df["Speedup_Wall"], marker="o", linestyle="-", label="Measured speedup")
@@ -707,7 +710,7 @@ plt.grid(True, alpha=0.3)
 plt.legend()
 add_common_footer(df)
 plt.savefig(os.path.join(plot_dir, f"amdahl_speedup_{run_label}.png"), bbox_inches="tight")
-plt.show()
+plt.close()
 
 # Print total benchmark duration in the log
 end_time = datetime.now()
@@ -723,9 +726,3 @@ if "_log_file" in globals():
         _log_file.close()
     except Exception:
         pass
-
-
-
-
-
-
