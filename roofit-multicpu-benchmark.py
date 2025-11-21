@@ -67,9 +67,34 @@ def get_os_name_version():
 
     # Windows
     if sysname == "Windows":
+        try:
+            out = subprocess.check_output(
+                "wmic os get Caption,Version /value",
+                shell=True
+            ).decode(errors="ignore")
+
+            os_name = None
+            os_version = None
+
+            for line in out.splitlines():
+                line = line.strip()
+                if line.startswith("Caption="):
+                    os_name = line.split("=", 1)[1].strip()
+                elif line.startswith("Version="):
+                    os_version = line.split("=", 1)[1].strip()
+
+            if os_name and os_version:
+                # Example:
+                #   os_name    = "Microsoft Windows 11 Pro"
+                #   os_version = "10.0.26100"
+                return os_name, os_version
+        except Exception:
+            pass
+
         os_name = "Windows"
-        os_version = platform.release()
+        os_version = platform.version()  
         return os_name, os_version
+
 
     # Fallback for other systems
     return sysname, platform.release()
@@ -330,7 +355,7 @@ def fmt_now():
 
 bins = 200
 seed = 1010
-events = 10000
+events = 100000
 
 # Convert event count to a string label
 if events == 100:
@@ -433,14 +458,17 @@ try:
     import shutil
     if shutil.which("lstopo") is not None:
         topology_svg = os.path.join(plot_dir, f"cpu_topology_{run_label}.svg")
+        print(f"Exporting CPU topology with lstopo to {topology_svg}", flush=True)
         try:
             subprocess.run(["lstopo", topology_svg], check=True)
+            print("CPU topology export completed successfully.", flush=True)
         except Exception as e:
             print(f"Could not run lstopo (skipping topology export): {e}", flush=True)
     else:
         print("lstopo not found in PATH, skipping CPU topology export.", flush=True)
 except Exception as e:
     print(f"Error while checking for lstopo: {e}", flush=True)
+
 
 
 # Save a JSON config with system and benchmark settings
@@ -563,11 +591,25 @@ for ncpu in cpu_counts:
     total_cpu = user_cpu + sys_cpu
 
     if ref_wall is None:
-        ref_wall, ref_cpu = wall_time, sys_cpu
+        ref_wall = wall_time
+        # Baseline CPU: first sys, or total, or user
+        if sys_cpu > 0:
+            ref_cpu = sys_cpu
+        elif total_cpu > 0:
+            ref_cpu = total_cpu
+        else:
+            ref_cpu = user_cpu
 
-    speedup_wall = ref_wall / wall_time
-    speedup_cpu = ref_cpu / sys_cpu
+    #speedup_wall = ref_wall / wall_time
+    #speedup_cpu = ref_cpu / sys_cpu
+    # Wall time speedup 
+    speedup_wall = ref_wall / wall_time if wall_time > 0 else float("nan")
 
+    # CPU time speedup: sys_cpu might be 0 in some platforms
+    if sys_cpu > 0 and ref_cpu > 0:
+        speedup_cpu = ref_cpu / sys_cpu
+    else:
+        speedup_cpu = float("nan")    
     results.append({
         "NumCPU": ncpu,
         "User_CPU(s)": user_cpu,
@@ -672,8 +714,8 @@ S_max_obs = float(row_maxN["Speedup_Wall"])
 f_parallel = 1.0 - 1.0 / S_max_obs
 serial_fraction = 1.0 - f_parallel
 print(f"Observed max speedup S(N_max={N_max}) = {S_max_obs:.3f}")
-print(f"Estimated parallel fraction f ≈ {f_parallel:.3f}")
-print(f"Estimated serial fraction 1-f ≈ {serial_fraction:.3f}")
+print(f"Estimated parallel fraction f ~= {f_parallel:.3f}")
+print(f"Estimated serial fraction 1-f ~= {serial_fraction:.3f}")
 
 N_values = df["NumCPU"].astype(float).values
 f = f_parallel
@@ -686,7 +728,6 @@ df.to_csv(results_csv, index=False)
 
 
 plt.figure(figsize=(15, 7))
-
 plt.plot(df["NumCPU"], df["Wall_Time(s)"], marker="o", linestyle="-", label="Measured wall time")
 plt.plot(df["NumCPU"], df["Amdahl_Wall_Time"], marker="s", linestyle="--", label="Amdahl model")
 plt.xlabel("Number of CPUs")
