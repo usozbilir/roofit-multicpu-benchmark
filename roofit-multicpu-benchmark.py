@@ -166,12 +166,24 @@ def get_cpu_info():
         except AttributeError:
             # Fallback if sched_getaffinity is not available
             available_cores = os.cpu_count() or 1
-
-        physical_cores = cpu_info.get("cores_per_socket", 0) * cpu_info.get("sockets", 0)
-        logical_cpus = cpu_info.get("logical_cpus")
+        cores_per_socket = cpu_info.get("cores_per_socket")
+        sockets         = cpu_info.get("sockets")
+        logical_cpus    = cpu_info.get("logical_cpus") or available_cores
         threads_per_core = cpu_info.get("threads_per_core")
 
-        info["physical_cores"] = physical_cores or available_cores or (os.cpu_count() or 1)
+        if cores_per_socket and sockets:
+            physical_cores = cores_per_socket * sockets
+        else:
+            physical_cores = logical_cpus
+
+        # CORRECTION FOR HYBRID / ARM-LIKE SITUATIONS:
+        # - No Hyperthreading (threads_per_core == 1)
+        # - “physical” is illogically smaller than “logical”
+
+        if threads_per_core == 1 and physical_cores < logical_cpus:
+            physical_cores = logical_cpus
+
+        info["physical_cores"] = physical_cores
         info["total_core_count"] = available_cores
         info["logical_cpus"] = logical_cpus
         info["threads_per_core"] = threads_per_core
